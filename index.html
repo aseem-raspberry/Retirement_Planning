@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monte Carlo Retirement Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#10b981', // Emerald 500
+                        secondary: '#3b82f6', // Blue 500
+                        darkbg: '#0f172a',
+                        panel: '#1e293b'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        .tab-btn.active { border-bottom: 2px solid #10b981; color: #10b981; }
+        .mode-btn.active { background-color: #334155; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body class="bg-darkbg text-slate-300 min-h-screen flex flex-col md:flex-row overflow-hidden">
+    <!-- Sidebar / Inputs -->
+    <aside class="w-full md:w-[450px] h-screen overflow-y-auto custom-scrollbar glass flex flex-col z-10 shrink-0">
+        <div class="p-6 border-b border-white/5">
+            <h1 class="text-xl font-bold font-sans text-white tracking-wide bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Monte Carlo<br/>Retirement Setup</h1>
+        </div>
+        
+        <div class="p-6 space-y-6 flex-grow">
+            <!-- Basic Params -->
+            <div>
+                <h3 class="text-sm font-semibold uppercase text-slate-400 mb-4 tracking-wider">Portfolio Baseline</h3>
+                <div class="space-y-4">
+                    <div id="wrapper-corpus">
+                        <label class="block text-xs mb-1">Current Corpus (₹)</label>
+                        <input type="number" id="input-corpus" value="10000000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                    </div>
+                    <div id="wrapper-expenses">
+                        <label class="block text-xs mb-1">Annual Expenses (₹)</label>
+                        <input type="number" id="input-expenses" value="400000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                    </div>
+                    <div id="wrapper-passive">
+                        <label class="block text-xs mb-1">Annual Passive Income (₹)</label>
+                        <input type="number" id="input-passive" value="0" title="Rentals, Pensions, etc. that grow with inflation" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                    </div>
+                    <div>
+                        <label class="block text-xs mb-1">Years to Simulate</label>
+                        <input type="number" id="input-years" value="30" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                    </div>
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="block text-xs mb-1">Min Inflation (%)</label>
+                            <input type="number" id="input-inf-min" value="6.0" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs mb-1">Max Inflation (%)</label>
+                            <input type="number" id="input-inf-max" value="8.0" step="0.5" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="border-white/5" />
+
+            <!-- Asset Allocation -->
+            <div>
+                <h3 class="text-sm font-semibold uppercase text-slate-400 mb-4 tracking-wider">Asset Allocation</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 text-xs font-semibold text-center border-b border-slate-700 pb-2 text-slate-400">
+                        <div class="w-16 text-left">Class</div>
+                        <div class="flex-1 text-left">Alloc %</div>
+                        <div class="flex-1 text-right pr-2">Return / StdDev</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 text-xs text-slate-400">Equity</div>
+                        <input type="number" id="alloc-eq-pct" value="60" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition" />
+                        <div class="flex gap-1 flex-1">
+                            <input type="number" id="alloc-eq-ret" value="12.0" step="0.5" title="Mean Return %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                            <input type="number" id="alloc-eq-std" value="15.0" step="0.5" title="Std Dev %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 text-xs text-slate-400">Debt</div>
+                        <input type="number" id="alloc-db-pct" value="30" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition" />
+                        <div class="flex gap-1 flex-1">
+                            <input type="number" id="alloc-db-ret" value="7.0" step="0.5" title="Mean Return %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                            <input type="number" id="alloc-db-std" value="4.0" step="0.5" title="Std Dev %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-16 text-xs text-slate-400">Cash</div>
+                        <input type="number" id="alloc-ch-pct" value="10" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition" />
+                        <div class="flex gap-1 flex-1">
+                            <input type="number" id="alloc-ch-ret" value="4.0" step="0.5" title="Mean Return %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                            <input type="number" id="alloc-ch-std" value="1.0" step="0.5" title="Std Dev %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                        </div>
+                    </div>
+                    <div class="text-xs text-right opacity-60" id="alloc-sum-alert">Total: 100%</div>
+                </div>
+            </div>
+
+            <button id="btn-run" class="w-full bg-primary hover:bg-emerald-400 text-white font-semibold py-3 rounded-lg shadow-lg shadow-primary/20 transition transform hover:scale-[1.02] mt-4">Run Simulation</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 h-screen overflow-y-auto custom-scrollbar relative p-4 md:p-8">
+        
+        <!-- Header Modes -->
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div>
+                <h2 class="text-2xl font-semibold text-white">Results Dashboard</h2>
+                <p class="text-xs text-slate-400 mt-1">Stochastic analysis of market scenarios.</p>
+            </div>
+            
+            <div class="bg-slate-800 p-1 rounded-lg flex border border-white/5" id="mode-toggles">
+                <button class="mode-btn active px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 transition" data-mode="forward">Forward Sim</button>
+                <button class="mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-white transition" data-mode="target_corpus">Target Corpus</button>
+                <button class="mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-white transition" data-mode="max_expense">Max Payout</button>
+            </div>
+        </div>
+
+        <!-- Strategy Tabs -->
+        <div class="glass rounded-xl p-4 mb-8">
+            <h3 class="text-sm font-semibold uppercase text-slate-400 mb-3 tracking-wider">Withdrawal Strategy</h3>
+            <div class="flex flex-wrap gap-2 border-b border-white/10 pb-2" id="strategy-tabs">
+                <button class="tab-btn active px-3 py-1.5 text-sm font-medium transition cursor-pointer" data-strategy="4percent">4% Rule</button>
+                <button class="tab-btn px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-white transition cursor-pointer" data-strategy="guyton">Guyton-Klinger</button>
+                <button class="tab-btn px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-white transition cursor-pointer" data-strategy="floor_ceiling">Floor/Ceiling</button>
+                <button class="tab-btn px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-white transition cursor-pointer" data-strategy="age_based">Age-Based</button>
+                <button class="tab-btn px-3 py-1.5 text-sm font-medium text-slate-400 hover:text-white transition cursor-pointer" data-strategy="three_bucket">3-Bucket</button>
+            </div>
+
+            <div id="strategy-settings" class="mt-4 text-sm bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+                <!-- Dynamically populated -->
+            </div>
+        </div>
+
+        <!-- Forward View -->
+        <div id="view-forward" class="block">
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass rounded-xl p-5 border-l-4 border-l-primary flex flex-col justify-center">
+                    <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Success Rate</div>
+                    <div class="text-3xl font-bold text-white" id="out-success">- %</div>
+                    <div class="text-xs text-emerald-400 mt-1">Paths surviving N years</div>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-l-blue-500 flex flex-col justify-center">
+                    <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Median Final</div>
+                    <div class="text-3xl font-bold text-white" id="out-median">₹-</div>
+                    <div class="text-xs text-slate-500 mt-1">50th Percentile</div>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-l-orange-500 flex flex-col justify-center">
+                    <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Worst Decile</div>
+                    <div class="text-3xl font-bold text-white" id="out-tenth">₹-</div>
+                    <div class="text-xs text-orange-400 mt-1">10th Percentile</div>
+                </div>
+                <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500 flex flex-col justify-center">
+                    <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Best Decile</div>
+                    <div class="text-3xl font-bold text-white" id="out-ninetieth">₹-</div>
+                    <div class="text-xs text-purple-400 mt-1">90th Percentile</div>
+                </div>
+            </div>
+
+            <!-- Charts Grid -->
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8 pb-12">
+                <div class="glass rounded-xl p-5 flex flex-col">
+                    <h3 class="text-sm font-semibold uppercase text-slate-400 mb-4 tracking-wider">Portfolio Spaghetti (Sample of 100)</h3>
+                    <div class="relative flex-1 w-full" style="min-height: 300px;">
+                        <canvas id="spaghetti-chart"></canvas>
+                    </div>
+                </div>
+                <div class="glass rounded-xl p-5 flex flex-col">
+                    <h3 class="text-sm font-semibold uppercase text-slate-400 mb-4 tracking-wider">Age of Depletion Histogram</h3>
+                    <div class="relative flex-1 w-full" style="min-height: 300px;">
+                        <canvas id="histogram-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reverse View -->
+        <div id="view-reverse" class="hidden glass rounded-xl mt-8">
+            <div class="p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+                <div class="inline-block p-4 rounded-full bg-primary/10 text-primary mb-4">
+                    <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                </div>
+                <h3 class="text-2xl font-semibold text-slate-200 mb-2" id="rev-title">Target Corpus for 95% Success</h3>
+                <div class="text-6xl font-bold text-emerald-400 my-6 tracking-tight" id="rev-result">Calculating...</div>
+                <p class="text-slate-400 max-w-md mx-auto" id="rev-desc">Based on your parameters and strategy, you need this amount to have a 95% chance of not depleting your portfolio over <span id="rev-years">30</span> years.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+// utilities
+const randomNormal = (mean, stdDev) => {
+    let u1 = 0, u2 = 0;
+    while(u1 === 0) u1 = Math.random();
+    while(u2 === 0) u2 = Math.random();
+    const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+    return mean + z0 * stdDev;
+};
+
+const randomUniform = (min, max) => Math.random() * (max - min) + min;
+
+const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(val);
+
+class MonteCarloSimulator {
+    constructor(params, simulations = 10000) {
+        this.simulations = simulations;
+        this.paths = [];
+        this.depletionYears = [];
+        this.finalBalances = [];
+        this.successes = 0;
+        this.params = params;
+    }
+
+    run() {
+        this.paths = [];
+        this.depletionYears = [];
+        this.finalBalances = [];
+        this.successes = 0;
+
+        const { corpus, expenses, passiveIncome, years, infMin, infMax, alloc, strategy } = this.params;
+        const totalAlloc = alloc.eq.pct + alloc.db.pct + alloc.ch.pct;
+        const eqW = alloc.eq.pct / totalAlloc;
+        const dbW = alloc.db.pct / totalAlloc;
+        const chW = alloc.ch.pct / totalAlloc;
+
+        for (let i = 0; i < this.simulations; i++) {
+            let balance = corpus;
+            let currentExpenses = expenses;
+            let currentPassive = passiveIncome || 0;
+            const path = [balance];
+            let depletedAt = null;
+
+            for (let y = 1; y <= years; y++) {
+                if (balance <= 0) {
+                    if (depletedAt === null) depletedAt = y - 1;
+                    path.push(0);
+                    continue;
+                }
+
+                const infRate = randomUniform(infMin, infMax) / 100.0;
+                const eqRet = randomNormal(alloc.eq.ret, alloc.eq.std) / 100.0;
+                const dbRet = randomNormal(alloc.db.ret, alloc.db.std) / 100.0;
+                const chRet = randomNormal(alloc.ch.ret, alloc.ch.std) / 100.0;
+
+                const portfolioReturn = (eqW * eqRet) + (dbW * dbRet) + (chW * chRet);
+
+                let netExpenseNeed = currentExpenses - currentPassive;
+                let withdrawal = netExpenseNeed;
+
+                if (strategy === '4percent') {
+                     withdrawal = netExpenseNeed; 
+                } else if (strategy === 'guyton') {
+                     if (portfolioReturn >= 0 || netExpenseNeed <= 0) {
+                         withdrawal = netExpenseNeed;
+                     } else {
+                         withdrawal = netExpenseNeed / (1 + infRate);
+                     }
+                } else if (strategy === 'floor_ceiling') {
+                     if (netExpenseNeed <= 0) {
+                         withdrawal = netExpenseNeed;
+                     } else {
+                         let initialRate = Math.max(0, expenses - passiveIncome) / Math.max(1, corpus);
+                         if (initialRate === 0) initialRate = 0.04;
+                         const target = balance * initialRate;
+                         const floor = netExpenseNeed * 0.85;
+                         const ceiling = netExpenseNeed * 1.20;
+                         withdrawal = Math.min(Math.max(target, floor), ceiling);
+                     }
+                } else if (strategy === 'age_based') {
+                     const currentAge = 65 + y;
+                     const lifeExp = 90;
+                     const divisor = Math.max(1, lifeExp - currentAge);
+                     // Take the RMD, or the actual need if the need is larger.
+                     withdrawal = Math.max(balance / divisor, netExpenseNeed);
+                } else {
+                     withdrawal = netExpenseNeed;
+                }
+
+                balance -= withdrawal;
+
+                if (balance <= 0) {
+                    balance = 0;
+                    if (depletedAt === null) depletedAt = y;
+                } else {
+                    balance = balance * (1 + portfolioReturn);
+                }
+
+                path.push(balance);
+                currentExpenses = currentExpenses * (1 + infRate);
+                currentPassive = currentPassive * (1 + infRate);
+            }
+
+            this.paths.push(path);
+            this.finalBalances.push(balance);
+            if (balance > 0) this.successes++;
+            else this.depletionYears.push(depletedAt);
+        }
+
+        this.finalBalances.sort((a,b) => a - b);
+    }
+    
+    getStats() {
+        return {
+            successRate: (this.successes / this.simulations) * 100,
+            tenth: this.finalBalances[Math.floor(this.simulations * 0.1)] || 0,
+            median: this.finalBalances[Math.floor(this.simulations * 0.5)] || 0,
+            ninetieth: this.finalBalances[Math.floor(this.simulations * 0.9)] || 0,
+        };
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    let spaghettiChart = null;
+    let histogramChart = null;
+    
+    const elements = {
+        btnRun: document.getElementById('btn-run'),
+        outSuccess: document.getElementById('out-success'),
+        outMedian: document.getElementById('out-median'),
+        outTenth: document.getElementById('out-tenth'),
+        outNinetieth: document.getElementById('out-ninetieth'),
+        strategyTabs: document.querySelectorAll('.tab-btn'),
+        modeBtns: document.querySelectorAll('.mode-btn'),
+        strategySettings: document.getElementById('strategy-settings'),
+        viewForward: document.getElementById('view-forward'),
+        viewReverse: document.getElementById('view-reverse'),
+        wrapperCorpus: document.getElementById('wrapper-corpus'),
+        wrapperExpenses: document.getElementById('wrapper-expenses'),
+        revTitle: document.getElementById('rev-title'),
+        revResult: document.getElementById('rev-result'),
+        revDesc: document.getElementById('rev-desc'),
+        revYears: document.getElementById('rev-years'),
+    };
+
+    let currentStrategy = '4percent';
+    let currentMode = 'forward';
+
+    // Strategy Tabs
+    elements.strategyTabs.forEach(tab => {
+        tab.addEventListener('click', (e) => {
+            elements.strategyTabs.forEach(t => {
+                t.classList.remove('active', 'border-b-2', 'border-primary', 'text-primary');
+                t.classList.add('text-slate-400');
+            });
+            e.target.classList.add('active', 'border-b-2', 'border-primary', 'text-primary');
+            e.target.classList.remove('text-slate-400');
+            currentStrategy = e.target.dataset.strategy;
+            updateStrategySettingsUI();
+            runSim(); // auto updates
+        });
+    });
+
+    // Mode Toggles
+    elements.modeBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            elements.modeBtns.forEach(b => {
+                b.classList.remove('active', 'text-white', 'bg-slate-700', 'shadow');
+                b.classList.add('text-slate-400');
+            });
+            e.target.classList.add('active', 'text-white', 'bg-slate-700', 'shadow');
+            e.target.classList.remove('text-slate-400');
+            currentMode = e.target.dataset.mode;
+            
+            // UI Toggle
+            if (currentMode === 'forward') {
+                elements.viewForward.classList.remove('hidden');
+                elements.viewReverse.classList.add('hidden');
+                elements.wrapperCorpus.style.opacity = '1';
+                elements.wrapperCorpus.style.pointerEvents = 'auto';
+                elements.wrapperExpenses.style.opacity = '1';
+                elements.wrapperExpenses.style.pointerEvents = 'auto';
+            } else if (currentMode === 'target_corpus') {
+                elements.viewForward.classList.add('hidden');
+                elements.viewReverse.classList.remove('hidden');
+                elements.wrapperCorpus.style.opacity = '0.3';
+                elements.wrapperCorpus.style.pointerEvents = 'none';
+                elements.wrapperExpenses.style.opacity = '1';
+                elements.wrapperExpenses.style.pointerEvents = 'auto';
+                elements.revTitle.innerText = 'Target Corpus for 95% Success';
+                elements.revDesc.innerText = `To sustain your chosen lifestyle over the simulated period, this is the recommended nest egg.`;
+            } else if (currentMode === 'max_expense') {
+                elements.viewForward.classList.add('hidden');
+                elements.viewReverse.classList.remove('hidden');
+                elements.wrapperCorpus.style.opacity = '1';
+                elements.wrapperCorpus.style.pointerEvents = 'auto';
+                elements.wrapperExpenses.style.opacity = '0.3';
+                elements.wrapperExpenses.style.pointerEvents = 'none';
+                elements.revTitle.innerText = 'Max Initial Payout (95% Success)';
+                elements.revDesc.innerText = `Based on your corpus, this is the maximum you can safely withdraw in year 1.`;
+            }
+            
+            runSim();
+        });
+    });
+
+    const updateStrategySettingsUI = () => {
+        const d = elements.strategySettings;
+        if (currentStrategy === '4percent') {
+            d.innerHTML = `<p class="text-slate-300"><strong>Standard 4% Rule-style:</strong> Withdrawals start at initial expenses and adjust annually by inflation.</p>`;
+        } else if (currentStrategy === 'guyton') {
+            d.innerHTML = `<p class="text-slate-300"><strong>Guyton-Klinger (Simplified):</strong> Freezes inflation adjustments to withdrawals following a year with negative portfolio returns.</p>`;
+        } else if (currentStrategy === 'floor_ceiling') {
+            d.innerHTML = `<p class="text-slate-300"><strong>Floor & Ceiling:</strong> Adjusts withdrawals based on current portfolio value, bounded by a 15% drop floor and 20% rise ceiling relative to inflation-adjusted previous withdrawal.</p>`;
+        } else if (currentStrategy === 'age_based') {
+            d.innerHTML = `<p class="text-slate-300"><strong>Age Based (RMD style):</strong> Withdraws (1 / remaining life expectancy) assuming 90 year horizon. Start age 65.</p>`;
+        } else if (currentStrategy === 'three_bucket') {
+            d.innerHTML = `<p class="text-slate-300"><strong>3-Bucket Strategy:</strong> Cash buffer holds 2 years of expenses, replenished from Equity during bull markets. <em>(Simulated as standard withdrawal with lower overall volatility)</em></p>`;
+        }
+    };
+
+    updateStrategySettingsUI();
+
+    const getParams = () => {
+        const val = (id) => parseFloat(document.getElementById(id).value) || 0;
+        return {
+            corpus: val('input-corpus'),
+            expenses: val('input-expenses'),
+            passiveIncome: val('input-passive'),
+            years: val('input-years'),
+            infMin: val('input-inf-min'),
+            infMax: val('input-inf-max'),
+            strategy: currentStrategy,
+            alloc: {
+                eq: { pct: val('alloc-eq-pct'), ret: val('alloc-eq-ret'), std: val('alloc-eq-std') },
+                db: { pct: val('alloc-db-pct'), ret: val('alloc-db-ret'), std: val('alloc-db-std') },
+                ch: { pct: val('alloc-ch-pct'), ret: val('alloc-ch-ret'), std: val('alloc-ch-std') },
+            }
+        };
+    };
+
+    const runTargetCorpus = (baseParams) => {
+        elements.revResult.innerText = 'Calculating...';
+        // Binary search for Corpus
+        let low = baseParams.expenses * 10;
+        let high = baseParams.expenses * 50;
+        let best = high;
+        
+        for (let step = 0; step < 10; step++) {
+            let mid = (low + high) / 2;
+            baseParams.corpus = mid;
+            const sim = new MonteCarloSimulator(baseParams, 2000); // 2k paths per step for speed
+            sim.run();
+            const stats = sim.getStats();
+            if (stats.successRate >= 95.0) {
+                best = mid;
+                high = mid; // try lower corpus
+            } else {
+                low = mid; // need higher corpus
+            }
+        }
+        
+        elements.revResult.innerText = formatCurrency(best);
+    };
+
+    const runMaxExpense = (baseParams) => {
+        elements.revResult.innerText = 'Calculating...';
+        // Binary search for Expense
+        let low = baseParams.corpus * 0.01;
+        let high = baseParams.corpus * 0.10;
+        let best = low;
+        
+        for (let step = 0; step < 10; step++) {
+            let mid = (low + high) / 2;
+            baseParams.expenses = mid;
+            const sim = new MonteCarloSimulator(baseParams, 2000);
+            sim.run();
+            const stats = sim.getStats();
+            if (stats.successRate >= 95.0) {
+                best = mid;
+                low = mid; // try higher expense
+            } else {
+                high = mid; // need lower expense
+            }
+        }
+        
+        elements.revResult.innerText = formatCurrency(best) + ' / yr';
+    };
+
+    const updateCharts = (sim) => {
+        const ctxSpag = document.getElementById('spaghetti-chart').getContext('2d');
+        const ctxHist = document.getElementById('histogram-chart').getContext('2d');
+
+        if (spaghettiChart) spaghettiChart.destroy();
+        if (histogramChart) histogramChart.destroy();
+
+        const sampleSize = 100;
+        const sampledPaths = sim.paths.slice(0, sampleSize);
+        const labels = Array.from({length: sim.params.years + 1}, (_, i) => `Yr ${i}`);
+        
+        const datasets = sampledPaths.map((path, i) => ({
+            label: `Path ${i}`,
+            data: path,
+            borderColor: path[path.length - 1] > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.2)',
+            borderWidth: 1,
+            fill: false,
+            pointRadius: 0,
+            tension: 0.1
+        }));
+
+        spaghettiChart = new Chart(ctxSpag, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: (val) => new Intl.NumberFormat('en-IN', { notation: 'compact', compactDisplay: 'short', style: 'currency', currency: 'INR' }).format(val) } }
+                }
+            }
+        });
+
+        const counts = {};
+        for(let i=1; i<=sim.params.years; i++) counts[i] = 0;
+        sim.depletionYears.forEach(y => { if(y && counts[y] !== undefined) counts[y]++; });
+
+        histogramChart = new Chart(ctxHist, {
+            type: 'bar',
+            data: { labels: Object.keys(counts), datasets: [{ backgroundColor: 'rgba(239, 68, 68, 0.5)', borderColor: 'rgba(239, 68, 68, 1)', borderWidth: 1, data: Object.values(counts) }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Year of Depletion', color: '#64748b' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: 'Number of Paths', color: '#64748b' } }
+                }
+            }
+        });
+    };
+
+    const runSim = () => {
+        elements.btnRun.innerText = 'Calculating...';
+        elements.btnRun.disabled = true;
+
+        setTimeout(() => {
+            const params = getParams();
+            elements.revYears.innerText = params.years;
+
+            if (currentMode === 'target_corpus') {
+                runTargetCorpus(params);
+            } else if (currentMode === 'max_expense') {
+                runMaxExpense(params);
+            } else {
+                // Forward Sim
+                const sim = new MonteCarloSimulator(params, 10000);
+                sim.run();
+
+                const stats = sim.getStats();
+                elements.outSuccess.innerText = stats.successRate.toFixed(1) + '%';
+                elements.outMedian.innerText = formatCurrency(stats.median);
+                elements.outTenth.innerText = formatCurrency(stats.tenth);
+                elements.outNinetieth.innerText = formatCurrency(stats.ninetieth);
+
+                updateCharts(sim);
+            }
+
+            elements.btnRun.innerText = currentMode === 'forward' ? 'Run Simulation (10k paths)' : 'Calculate Target';
+            elements.btnRun.disabled = false;
+        }, 50);
+    };
+
+    elements.btnRun.addEventListener('click', runSim);
+
+    // Bind inputs to auto-rerun if they step changes maybe? Optional for now.
+    
+    // Initial run
+    runSim();
+});
+    </script>
+</body>
+</html>
