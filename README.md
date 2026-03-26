@@ -21,6 +21,5 @@ A fast, responsive, single-page web application that models retirement portfolio
 
 Because the application runs entirely client-side, there are no complicated installation steps, backend servers, or build processes required.
 
-1. Clone or download the repository.
-2. Open `index.html` directly in any modern web browser.
-3. Adjust your baseline metrics and hit **Run Simulation**!
+1. Just download and open `index.html` directly in any modern web browser.
+2. Adjust your baseline metrics and hit **Run Simulation**!
