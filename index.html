@@ -35,9 +35,9 @@
         .mode-btn.active { background-color: #334155; color: white; box-shadow: 0 1px 3px rgba(0,0,0,0.3); }
     </style>
 </head>
-<body class="bg-darkbg text-slate-300 min-h-screen flex flex-col md:flex-row overflow-hidden">
+<body class="bg-darkbg text-slate-300 min-h-screen flex flex-col md:flex-row md:overflow-hidden">
     <!-- Sidebar / Inputs -->
-    <aside class="w-full md:w-[450px] h-screen overflow-y-auto custom-scrollbar glass flex flex-col z-10 shrink-0">
+    <aside class="w-full md:w-[450px] md:h-screen md:overflow-y-auto custom-scrollbar glass flex flex-col z-10 shrink-0">
         <div class="p-6 border-b border-white/5">
             <h1 class="text-xl font-bold font-sans text-white tracking-wide bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Monte Carlo<br/>Retirement Setup</h1>
         </div>
@@ -49,19 +49,25 @@
                 <div class="space-y-4">
                     <div id="wrapper-corpus">
                         <label class="block text-xs mb-1">Current Corpus (₹)</label>
-                        <input type="number" id="input-corpus" value="10000000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        <input type="text" inputmode="numeric" id="input-corpus" value="4,00,00,000" class="currency-input w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
                     </div>
                     <div id="wrapper-expenses">
                         <label class="block text-xs mb-1">Annual Expenses (₹)</label>
-                        <input type="number" id="input-expenses" value="400000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        <input type="text" inputmode="numeric" id="input-expenses" value="12,00,000" class="currency-input w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
                     </div>
                     <div id="wrapper-passive">
                         <label class="block text-xs mb-1">Annual Passive Income (₹)</label>
-                        <input type="number" id="input-passive" value="0" title="Rentals, Pensions, etc. that grow with inflation" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        <input type="text" inputmode="numeric" id="input-passive" value="0" title="Rentals, Pensions, etc. that grow with inflation" class="currency-input w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
                     </div>
-                    <div>
-                        <label class="block text-xs mb-1">Years to Simulate</label>
-                        <input type="number" id="input-years" value="30" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                    <div class="flex gap-2">
+                        <div class="flex-1">
+                            <label class="block text-xs mb-1">Years to Simulate</label>
+                            <input type="number" id="input-years" value="30" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        </div>
+                        <div class="flex-1">
+                            <label class="block text-xs mb-1">Simulations</label>
+                            <input type="number" id="input-sims" value="10000" step="1000" min="1000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                        </div>
                     </div>
                     <div class="flex gap-2">
                         <div class="flex-1">
@@ -89,26 +95,26 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-16 text-xs text-slate-400">Equity</div>
-                        <input type="number" id="alloc-eq-pct" value="60" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition" />
-                        <div class="flex gap-1 flex-1">
-                            <input type="number" id="alloc-eq-ret" value="12.0" step="0.5" title="Mean Return %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
-                            <input type="number" id="alloc-eq-std" value="15.0" step="0.5" title="Std Dev %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                        <input type="number" id="alloc-eq-pct" value="60" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition min-w-0" />
+                        <div class="flex gap-1 flex-1 justify-end">
+                            <input type="number" id="alloc-eq-ret" value="12.0" step="0.5" title="Mean Return %" class="w-12 sm:w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center min-w-0" />
+                            <input type="number" id="alloc-eq-std" value="15.0" step="0.5" title="Std Dev %" class="w-12 sm:w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center min-w-0" />
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-16 text-xs text-slate-400">Debt</div>
-                        <input type="number" id="alloc-db-pct" value="30" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition" />
-                        <div class="flex gap-1 flex-1">
-                            <input type="number" id="alloc-db-ret" value="7.0" step="0.5" title="Mean Return %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
-                            <input type="number" id="alloc-db-std" value="4.0" step="0.5" title="Std Dev %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                        <input type="number" id="alloc-db-pct" value="30" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition min-w-0" />
+                        <div class="flex gap-1 flex-1 justify-end">
+                            <input type="number" id="alloc-db-ret" value="7.0" step="0.5" title="Mean Return %" class="w-12 sm:w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center min-w-0" />
+                            <input type="number" id="alloc-db-std" value="4.0" step="0.5" title="Std Dev %" class="w-12 sm:w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center min-w-0" />
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="w-16 text-xs text-slate-400">Cash</div>
-                        <input type="number" id="alloc-ch-pct" value="10" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition" />
-                        <div class="flex gap-1 flex-1">
-                            <input type="number" id="alloc-ch-ret" value="4.0" step="0.5" title="Mean Return %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
-                            <input type="number" id="alloc-ch-std" value="1.0" step="0.5" title="Std Dev %" class="w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center" />
+                        <input type="number" id="alloc-ch-pct" value="10" class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm focus:border-primary transition min-w-0" />
+                        <div class="flex gap-1 flex-1 justify-end">
+                            <input type="number" id="alloc-ch-ret" value="4.0" step="0.5" title="Mean Return %" class="w-12 sm:w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center min-w-0" />
+                            <input type="number" id="alloc-ch-std" value="1.0" step="0.5" title="Std Dev %" class="w-12 sm:w-14 bg-slate-800 border border-slate-700 rounded px-1 py-1 text-xs focus:border-primary transition text-center min-w-0" />
                         </div>
                     </div>
                     <div class="text-xs text-right opacity-60" id="alloc-sum-alert">Total: 100%</div>
@@ -120,7 +126,7 @@
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 h-screen overflow-y-auto custom-scrollbar relative p-4 md:p-8">
+    <main class="flex-1 md:h-screen md:overflow-y-auto custom-scrollbar relative p-4 md:p-8">
         
         <!-- Header Modes -->
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -129,10 +135,10 @@
                 <p class="text-xs text-slate-400 mt-1">Stochastic analysis of market scenarios.</p>
             </div>
             
-            <div class="bg-slate-800 p-1 rounded-lg flex border border-white/5" id="mode-toggles">
-                <button class="mode-btn active px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 transition" data-mode="forward">Forward Sim</button>
-                <button class="mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-white transition" data-mode="target_corpus">Target Corpus</button>
-                <button class="mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-white transition" data-mode="max_expense">Max Payout</button>
+            <div class="bg-slate-800 p-1 rounded-lg flex overflow-x-auto border border-white/5 w-full sm:w-auto custom-scrollbar" id="mode-toggles">
+                <button class="mode-btn active px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 transition whitespace-nowrap flex-shrink-0" data-mode="forward">Forward Sim</button>
+                <button class="mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap flex-shrink-0" data-mode="target_corpus">Target Corpus</button>
+                <button class="mode-btn px-3 py-1.5 rounded-md text-sm font-medium text-slate-400 hover:text-white transition whitespace-nowrap flex-shrink-0" data-mode="max_expense">Max Payout</button>
             </div>
         </div>
 
@@ -155,25 +161,25 @@
         <!-- Forward View -->
         <div id="view-forward" class="block">
             <!-- KPI Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                 <div class="glass rounded-xl p-5 border-l-4 border-l-primary flex flex-col justify-center">
                     <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Success Rate</div>
-                    <div class="text-3xl font-bold text-white" id="out-success">- %</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white truncate" id="out-success">- %</div>
                     <div class="text-xs text-emerald-400 mt-1">Paths surviving N years</div>
                 </div>
-                <div class="glass rounded-xl p-5 border-l-4 border-l-blue-500 flex flex-col justify-center">
+                <div class="glass rounded-xl p-5 border-l-4 border-l-blue-500 flex flex-col justify-center overflow-hidden">
                     <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Median Final</div>
-                    <div class="text-3xl font-bold text-white" id="out-median">₹-</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white truncate" id="out-median">₹-</div>
                     <div class="text-xs text-slate-500 mt-1">50th Percentile</div>
                 </div>
-                <div class="glass rounded-xl p-5 border-l-4 border-l-orange-500 flex flex-col justify-center">
+                <div class="glass rounded-xl p-5 border-l-4 border-l-orange-500 flex flex-col justify-center overflow-hidden">
                     <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Worst Decile</div>
-                    <div class="text-3xl font-bold text-white" id="out-tenth">₹-</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white truncate" id="out-tenth">₹-</div>
                     <div class="text-xs text-orange-400 mt-1">10th Percentile</div>
                 </div>
-                <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500 flex flex-col justify-center">
+                <div class="glass rounded-xl p-5 border-l-4 border-l-purple-500 flex flex-col justify-center overflow-hidden">
                     <div class="text-slate-400 text-xs font-semibold uppercase tracking-wider mb-1">Best Decile</div>
-                    <div class="text-3xl font-bold text-white" id="out-ninetieth">₹-</div>
+                    <div class="text-2xl sm:text-3xl font-bold text-white truncate" id="out-ninetieth">₹-</div>
                     <div class="text-xs text-purple-400 mt-1">90th Percentile</div>
                 </div>
             </div>
@@ -197,13 +203,13 @@
 
         <!-- Reverse View -->
         <div id="view-reverse" class="hidden glass rounded-xl mt-8">
-            <div class="p-12 text-center flex flex-col items-center justify-center min-h-[400px]">
+            <div class="p-6 md:p-12 text-center flex flex-col items-center justify-center min-h-[300px] md:min-h-[400px]">
                 <div class="inline-block p-4 rounded-full bg-primary/10 text-primary mb-4">
                     <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
                 </div>
-                <h3 class="text-2xl font-semibold text-slate-200 mb-2" id="rev-title">Target Corpus for 95% Success</h3>
-                <div class="text-6xl font-bold text-emerald-400 my-6 tracking-tight" id="rev-result">Calculating...</div>
-                <p class="text-slate-400 max-w-md mx-auto" id="rev-desc">Based on your parameters and strategy, you need this amount to have a 95% chance of not depleting your portfolio over <span id="rev-years">30</span> years.</p>
+                <h3 class="text-xl md:text-2xl font-semibold text-slate-200 mb-2" id="rev-title">Target Corpus for 95% Success</h3>
+                <div class="text-4xl md:text-6xl font-bold text-emerald-400 my-6 tracking-tight break-all" id="rev-result">Calculating...</div>
+                <p class="text-sm md:text-base text-slate-400 max-w-md mx-auto" id="rev-desc">Based on your parameters and strategy, you need this amount to have a 95% chance of not depleting your portfolio over <span id="rev-years">30</span> years.</p>
             </div>
         </div>
 
@@ -354,6 +360,23 @@ document.addEventListener('DOMContentLoaded', () => {
         revYears: document.getElementById('rev-years'),
     };
 
+    // Currency Formatting functionality
+    document.querySelectorAll('.currency-input').forEach(input => {
+        input.addEventListener('input', (e) => {
+            let cursorPosition = e.target.selectionStart;
+            let originalLen = e.target.value.length;
+            let val = e.target.value.replace(/[^0-9]/g, '');
+            if (val) {
+                e.target.value = parseInt(val, 10).toLocaleString('en-IN');
+            } else {
+                e.target.value = '';
+            }
+            let newLen = e.target.value.length;
+            cursorPosition += (newLen - originalLen);
+            e.target.setSelectionRange(cursorPosition, cursorPosition);
+        });
+    });
+
     let currentStrategy = '4percent';
     let currentMode = 'forward';
 
@@ -433,12 +456,13 @@ document.addEventListener('DOMContentLoaded', () => {
     updateStrategySettingsUI();
 
     const getParams = () => {
-        const val = (id) => parseFloat(document.getElementById(id).value) || 0;
+        const val = (id) => parseFloat(document.getElementById(id).value.toString().replace(/,/g, '')) || 0;
         return {
             corpus: val('input-corpus'),
             expenses: val('input-expenses'),
             passiveIncome: val('input-passive'),
             years: val('input-years'),
+            simulations: val('input-sims') || 10000,
             infMin: val('input-inf-min'),
             infMax: val('input-inf-max'),
             strategy: currentStrategy,
@@ -460,7 +484,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let step = 0; step < 10; step++) {
             let mid = (low + high) / 2;
             baseParams.corpus = mid;
-            const sim = new MonteCarloSimulator(baseParams, 2000); // 2k paths per step for speed
+            const sim = new MonteCarloSimulator(baseParams, Math.min(baseParams.simulations, 5000)); // cap at 5k for binary search speed
             sim.run();
             const stats = sim.getStats();
             if (stats.successRate >= 95.0) {
@@ -484,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (let step = 0; step < 10; step++) {
             let mid = (low + high) / 2;
             baseParams.expenses = mid;
-            const sim = new MonteCarloSimulator(baseParams, 2000);
+            const sim = new MonteCarloSimulator(baseParams, Math.min(baseParams.simulations, 5000)); // cap at 5k for binary search speed
             sim.run();
             const stats = sim.getStats();
             if (stats.successRate >= 95.0) {
@@ -564,7 +588,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 runMaxExpense(params);
             } else {
                 // Forward Sim
-                const sim = new MonteCarloSimulator(params, 10000);
+                const sim = new MonteCarloSimulator(params, params.simulations);
                 sim.run();
 
                 const stats = sim.getStats();
@@ -576,12 +600,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateCharts(sim);
             }
 
-            elements.btnRun.innerText = currentMode === 'forward' ? 'Run Simulation (10k paths)' : 'Calculate Target';
+            let pathsStr = params.simulations >= 1000 ? (params.simulations / 1000) + 'k' : params.simulations;
+            elements.btnRun.innerText = currentMode === 'forward' ? `Run Simulation (${pathsStr} paths)` : 'Calculate Target';
             elements.btnRun.disabled = false;
         }, 50);
     };
 
-    elements.btnRun.addEventListener('click', runSim);
+    elements.btnRun.addEventListener('click', () => {
+        runSim();
+        if (window.innerWidth < 768) {
+            document.querySelector('main').scrollIntoView({ behavior: 'smooth' });
+        }
+    });
 
     // Bind inputs to auto-rerun if they step changes maybe? Optional for now.
     
