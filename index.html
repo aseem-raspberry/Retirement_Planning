@@ -66,7 +66,7 @@
                         </div>
                         <div class="flex-1">
                             <label class="block text-xs mb-1">Simulations</label>
-                            <input type="number" id="input-sims" value="10000" step="1000" min="1000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
+                            <input type="number" id="input-sims" value="10000" step="1000" min="1000" max="1000000" class="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-sm focus:outline-none focus:border-primary transition" />
                         </div>
                     </div>
                     <div class="flex gap-2">
@@ -121,7 +121,13 @@
                 </div>
             </div>
 
-            <button id="btn-run" class="w-full bg-primary hover:bg-emerald-400 text-white font-semibold py-3 rounded-lg shadow-lg shadow-primary/20 transition transform hover:scale-[1.02] mt-4">Run Simulation</button>
+            <button id="btn-run" class="w-full bg-primary hover:bg-emerald-400 text-white font-semibold flex items-center justify-center gap-2 py-3 rounded-lg shadow-lg shadow-primary/20 transition transform hover:scale-[1.02] mt-4">
+                <svg id="btn-spinner" class="animate-spin h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span id="btn-text">Run Simulation</span>
+            </button>
         </div>
     </aside>
 
@@ -185,7 +191,13 @@
             </div>
 
             <!-- Charts Grid -->
-            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 mb-8 pb-12">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8 pb-12">
+                <div class="glass rounded-xl p-5 flex flex-col">
+                    <h3 class="text-sm font-semibold uppercase text-slate-400 mb-4 tracking-wider">Portfolio Projections (Percentiles)</h3>
+                    <div class="relative flex-1 w-full" style="min-height: 300px;">
+                        <canvas id="fan-chart"></canvas>
+                    </div>
+                </div>
                 <div class="glass rounded-xl p-5 flex flex-col">
                     <h3 class="text-sm font-semibold uppercase text-slate-400 mb-4 tracking-wider">Portfolio Spaghetti (Sample of 100)</h3>
                     <div class="relative flex-1 w-full" style="min-height: 300px;">
@@ -338,11 +350,14 @@ class MonteCarloSimulator {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    let spaghettiChart = null;
+    let fanChart = null;
     let histogramChart = null;
+    let spaghettiChart = null;
     
     const elements = {
         btnRun: document.getElementById('btn-run'),
+        btnSpinner: document.getElementById('btn-spinner'),
+        btnText: document.getElementById('btn-text'),
         outSuccess: document.getElementById('out-success'),
         outMedian: document.getElementById('out-median'),
         outTenth: document.getElementById('out-tenth'),
@@ -462,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
             expenses: val('input-expenses'),
             passiveIncome: val('input-passive'),
             years: val('input-years'),
-            simulations: val('input-sims') || 10000,
+            simulations: Math.min(val('input-sims') || 10000, 1000000),
             infMin: val('input-inf-min'),
             infMax: val('input-inf-max'),
             strategy: currentStrategy,
@@ -523,17 +538,94 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const updateCharts = (sim) => {
+        const ctxFan = document.getElementById('fan-chart').getContext('2d');
         const ctxSpag = document.getElementById('spaghetti-chart').getContext('2d');
         const ctxHist = document.getElementById('histogram-chart').getContext('2d');
 
+        if (fanChart) fanChart.destroy();
         if (spaghettiChart) spaghettiChart.destroy();
         if (histogramChart) histogramChart.destroy();
 
+        const years = sim.params.years;
+        const percentiles = { 10: [], 25: [], 50: [], 75: [], 90: [] };
+
+        for (let y = 0; y <= years; y++) {
+            const balancesAtYear = sim.paths.map(path => path[y]).sort((a, b) => a - b);
+            percentiles[10].push(balancesAtYear[Math.floor(sim.simulations * 0.1)] || 0);
+            percentiles[25].push(balancesAtYear[Math.floor(sim.simulations * 0.25)] || 0);
+            percentiles[50].push(balancesAtYear[Math.floor(sim.simulations * 0.5)] || 0);
+            percentiles[75].push(balancesAtYear[Math.floor(sim.simulations * 0.75)] || 0);
+            percentiles[90].push(balancesAtYear[Math.floor(sim.simulations * 0.9)] || 0);
+        }
+
+        const labels = Array.from({length: years + 1}, (_, i) => `Yr ${i}`);
+        
+        const datasets = [
+            {
+                label: '90th Percentile',
+                data: percentiles[90],
+                fill: false,
+                borderColor: 'transparent',
+                pointRadius: 0,
+                tension: 0.1
+            },
+            {
+                label: '10th Percentile',
+                data: percentiles[10],
+                fill: 0,
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                borderColor: 'transparent',
+                pointRadius: 0,
+                tension: 0.1
+            },
+            {
+                label: '75th Percentile',
+                data: percentiles[75],
+                fill: false,
+                borderColor: 'transparent',
+                pointRadius: 0,
+                tension: 0.1
+            },
+            {
+                label: '25th Percentile',
+                data: percentiles[25],
+                fill: 2,
+                backgroundColor: 'rgba(16, 185, 129, 0.25)',
+                borderColor: 'transparent',
+                pointRadius: 0,
+                tension: 0.1
+            },
+            {
+                label: 'Median (50th)',
+                data: percentiles[50],
+                fill: false,
+                borderColor: 'rgba(16, 185, 129, 1)',
+                borderWidth: 2,
+                pointRadius: 0,
+                tension: 0.1
+            }
+        ];
+
+        fanChart = new Chart(ctxFan, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: (val) => new Intl.NumberFormat('en-IN', { notation: 'compact', compactDisplay: 'short', style: 'currency', currency: 'INR' }).format(val) } }
+                }
+            }
+        });
+
         const sampleSize = 100;
         const sampledPaths = sim.paths.slice(0, sampleSize);
-        const labels = Array.from({length: sim.params.years + 1}, (_, i) => `Yr ${i}`);
-        
-        const datasets = sampledPaths.map((path, i) => ({
+        const spagDatasets = sampledPaths.map((path, i) => ({
             label: `Path ${i}`,
             data: path,
             borderColor: path[path.length - 1] > 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.2)',
@@ -545,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         spaghettiChart = new Chart(ctxSpag, {
             type: 'line',
-            data: { labels, datasets },
+            data: { labels, datasets: spagDatasets },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
@@ -575,7 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const runSim = () => {
-        elements.btnRun.innerText = 'Calculating...';
+        elements.btnText.innerText = 'Calculating...';
+        elements.btnSpinner.classList.remove('hidden');
         elements.btnRun.disabled = true;
 
         setTimeout(() => {
@@ -601,7 +694,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             let pathsStr = params.simulations >= 1000 ? (params.simulations / 1000) + 'k' : params.simulations;
-            elements.btnRun.innerText = currentMode === 'forward' ? `Run Simulation (${pathsStr} paths)` : 'Calculate Target';
+            if (params.simulations >= 1000000) pathsStr = (params.simulations / 1000000) + 'M';
+            elements.btnText.innerText = currentMode === 'forward' ? `Run Simulation (${pathsStr} paths)` : 'Calculate Target';
+            elements.btnSpinner.classList.add('hidden');
             elements.btnRun.disabled = false;
         }, 50);
     };
@@ -613,8 +708,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Bind inputs to auto-rerun if they step changes maybe? Optional for now.
-    
+    document.getElementById('input-sims').addEventListener('blur', (e) => {
+        let val = parseInt(e.target.value.replace(/,/g, ''), 10) || 10000;
+        val = Math.min(val, 1000000);
+        let pathsStr = val >= 1000 ? (val / 1000) + 'k' : val;
+        if (val >= 1000000) pathsStr = (val / 1000000) + 'M';
+        if (currentMode === 'forward') {
+            elements.btnText.innerText = `Run Simulation (${pathsStr} paths)`;
+        }
+    });
+
     // Initial run
     runSim();
 });
